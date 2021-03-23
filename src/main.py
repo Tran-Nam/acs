@@ -22,5 +22,5 @@ print('setup', data_obj.setup_time)
 optimizer.data_obj = data_obj 
 solution = range(60)
 # C = optimizer.evaluate(solution)
-optimizer.fit(data_obj)
-print(C)
+optimizer.fit(data_obj, iterations=50)
+# print(C)

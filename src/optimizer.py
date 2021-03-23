@@ -23,7 +23,7 @@ class ACS:
         self.visit_node = None
 
     def _reinstate_nodes(self):
-        self.set_of_available_nodes = list(range(self.map.shape[0]))
+        self.set_of_available_nodes = list(range(self.data_obj.setup_time.shape[0]))
 
     def _initialize(self):
         """
@@ -36,6 +36,11 @@ class ACS:
         num_nodes = self.data_obj.setup_time.shape[0]
         self.pheromone_matrix = np.ones((num_nodes, num_nodes))
         self.pheromone_matrix[np.eye(num_nodes)==1] = 0
+
+        self.heuristic_matrix = 1 / (self.data_obj.setup_time + 1e-6)
+        self.probability_matrix = (self.pheromone_matrix ** self.alpha) * \
+            (self.heuristic_matrix ** self.beta)
+
         self.set_of_available_nodes = list(range(num_nodes))
 
     def _update_probability(self):
@@ -93,6 +98,7 @@ class ACS:
             paths, path = [], []
             for ant in range(self.ants): # contruct solution for each ant
                 self._initialize()
+                # self._update_probability()
                 current_node = np.random.choice(self.set_of_available_nodes) # choose random node to start
                 start_node = current_node
                 while True:
@@ -107,5 +113,5 @@ class ACS:
                 paths.append(path)
                 path = []
             C = self.evaluate(solution=paths[0])
-        print(C)
+            print('iter:', i, 'loss:', C)
 
