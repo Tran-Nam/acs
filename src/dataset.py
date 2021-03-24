@@ -19,9 +19,9 @@ class Dataset():
         ds = data[d_id+1: s_id]
         ss = data[s_id+1: e_id]
         
-        self.ps = [int(p) for p in ps]
-        self.ws = [int(w) for w in ws]
-        self.ds = [int(d) for d in ds]
+        self.ps = np.array([int(p) for p in ps])
+        self.ws = np.array([int(w) for w in ws])
+        self.ds = np.array([int(d) for d in ds])
 
         self.n_tasks = len(ps)
         # self.begin_time = np.zeros((self.n_tasks, 1))
