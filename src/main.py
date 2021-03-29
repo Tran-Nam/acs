@@ -10,9 +10,10 @@ optimizer = ACS(ants=10)
 skip = 5
 data_obj.ps = data_obj.ps[:skip]
 data_obj.ds = data_obj.ds[:skip]
-data_obj.ds = np.array([int(i/100) for i in data_obj.ds])
+data_obj.ds = np.array([int(i/10) for i in data_obj.ds])
 data_obj.ws = data_obj.ws[:skip]
-data_obj.setup_time = data_obj.setup_time[:skip, :skip]
+# data_obj.setup_time = data_obj.setup_time[:skip, :skip]
+data_obj.setup_time = np.ones((skip, skip))*100
 
 
 print('process', data_obj.ps)
@@ -25,5 +26,5 @@ solution = range(skip)
 # coord, path, C = optimizer._evaluate([solution])
 # print('coord', coord)
 # print('path', path)
-optimizer.fit(data_obj, iterations=20)
+optimizer.fit(data_obj, iterations=1000)
 # print(C)

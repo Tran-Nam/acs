@@ -7,10 +7,10 @@ np.random.seed(20202020)
 class ACS:
     def __init__(self,
             ants=10,
-            evaporation_rate=0.2,
-            intensification=1,
+            evaporation_rate=0.8,
+            intensification=2,
             alpha=1,
-            beta=0):
+            beta=1):
         self.ants = ants
         self.evaporation_rate = evaporation_rate
         self.intensification = intensification
@@ -52,7 +52,7 @@ class ACS:
         print('PROBABILITY MATRIX')
         print(self.probability_matrix.round(3))
         print('='*10)
-        # input()
+        input()
 
         self.set_of_available_nodes = list(range(num_nodes))
 
@@ -63,16 +63,26 @@ class ACS:
         self.probability_matrix = (self.pheromone_matrix ** self.alpha) * \
             (self.heuristic_matrix ** self.beta)
 
-    def _choose_next_node(self, from_node):
+    def _update_probability_mdd(self, c):
+        self.heuristic_matrix = 1 / np.maximum(c + self.data_obj.ps + self.data_obj.setup_time, self.data_obj.ds)
+        self._update_probability()
+        print('HEURISTIC')
+        print(self.heuristic_matrix)
+        print('PROBABILITY')
+        print(self.probability_matrix)
+        # input()
+        # pass
+
+    def _choose_next_node_edd(self, from_node):
         """
         select next node base on probabillity and set of available nodes
         """        
         numerator = self.probability_matrix[from_node, self.set_of_available_nodes] # only use prob of remain nodes
-        # print('choose next node', from_node, numerator.round(3))
+        print('choose next node', from_node, numerator.round(3))
         denominator = np.sum(numerator)
         probability = numerator / denominator
         next_node = np.random.choice(range(len(probability)), p=probability)
-        print('from node', from_node, '- next node', next_node)
+        # print('from node', from_node, '- next node', next_node)
         return next_node
 
 
@@ -87,7 +97,7 @@ class ACS:
             for i in range(len(solution) - 1):
                 coord_i.append(solution[i])
                 coord_j.append(solution[i+1])
-            self.pheromone_matrix[coord_i, coord_j] += 1 / score
+            self.pheromone_matrix[coord_i, coord_j] += 1 / (score + 1e-6)
         # print('after pheromone', self.pheromone_matrix)
         
     def _intensify(self, coord):
@@ -97,18 +107,21 @@ class ACS:
     def _remove_node(self, node):
         self.set_of_available_nodes.remove(node)
 
-    # def evaluate(self, solution):
-    #     f_node = solution[0]
-    #     t = self.data_obj.setup_time[f_node, f_node] + self.data_obj.ps[solution[f_node]]
-    #     C = self.data_obj.ws[f_node] * max(0, (t - self.data_obj.ds[f_node]))
-    #     for i in range(1, len(solution)): # start from 1
-    #         # print('iter', i)
-    #         t += self.data_obj.setup_time[solution[i-1], solution[i]] # setup time 
-    #         t += self.data_obj.ps[solution[i]]
-    #         # print(t)
-    #         C += self.data_obj.ws[solution[i]] * max(0, (t - self.data_obj.ds[solution[i]]))
-    #         # print(C)
-    #     return C
+    def local_search(self, solution, max_iter=3):
+        best_loss = self._evaluate([solution])[-1][0]
+        i, j = np.random.choice(self.set_of_available_nodes, size=2)
+        n_iter = 0
+        while n_iter < max_iter:
+            # curr_loss = self._evaluate([solution])[-1][0]
+            solution_tmp = solution.copy()
+            solution_tmp[i], solution_tmp[j] = solution_tmp[j], solution_tmp[i] # exchange
+            loss = self._evaluate([solution_tmp])[-1][0]
+            if loss < best_loss:
+                best_loss = loss 
+                solution = solution_tmp
+            else:
+                n_iter += 1
+        return solution
 
     def _evaluate(self, solutions):
         scores, coord_is, coord_js = [], [], []
@@ -132,9 +145,9 @@ class ACS:
             coord_is.append(coord_i)
             coord_js.append(coord_j)
         idx = np.argmin(scores)
-        print('EVALUATE!')
-        for solution, score in zip(solutions, scores):
-            print(solution, ' - ', score)
+        # print('EVALUATE!')
+        # for solution, score in zip(solutions, scores):
+        #     print(solution, ' - ', score)
         return (coord_is[idx], coord_js[idx]), solutions[idx], scores[idx], scores
 
     def fit(self, data_obj: Dataset, iterations=100):
@@ -158,22 +171,41 @@ class ACS:
                 # self._update_probability()
                 current_node = np.random.choice(self.set_of_available_nodes) # choose random node to start
                 start_node = current_node
-                # print('start node', start_node)
+
+                # continuous evaluate
+                _t = self.data_obj.setup_time[start_node, start_node] + self.data_obj.ps[start_node] # current time
+                _c = self.data_obj.ws[start_node] * max(0, _t - self.data_obj.ds[start_node])
+                print('start node', start_node, _t)
                 while True:
                     path.append(current_node)
                     self._remove_node(current_node)
+                    self._update_probability_mdd(c=_t)
                     if len(self.set_of_available_nodes) != 0:
-                        current_node_index = self._choose_next_node(from_node=current_node)
+                        current_node_index = self._choose_next_node_edd(from_node=current_node)
+                        # current_node_index = self._choose_next_node_mdd(from_node=current_node, current_c=_c)
+                        old_node = current_node
                         current_node = self.set_of_available_nodes[current_node_index]
+                        print('next node', current_node)
+                        print('current time', _t)
+                        _t += self.data_obj.setup_time[old_node, current_node] + self.data_obj.ps[current_node] # current time
+                        _c += self.data_obj.ws[current_node] * max(0, _t - self.data_obj.ds[current_node])
+                        print('TIME', _t)
                     else:
                         break 
                 self._reinstate_nodes()
                 
+                # local search
+                path = self.local_search(path)
+
                 paths.append(path)
+                print(path)
+                # input()
                 path = []
             coord, solution, C, scores = self._evaluate(paths)
             best_path_list.append(solution)
             print('ALL SOLUTION:', paths)
+            for path, score in zip(paths, scores):
+                print(path, score)
             print('BEST SOLUTION:', solution)
             self.best_loss.append(C)
             # print('iter:', i, 'loss:', C)
@@ -185,12 +217,15 @@ class ACS:
             self._intensify(coord)
             print('AFTER INTENSIFY')
             print(self.pheromone_matrix.round(3))
-            self._update_probability()
+            # self._update_probability()
+            self._update_probability_mdd(c=0)
+            print('-'*20)
             # input()
         print('*'*20)
         for path, loss in zip(best_path_list, self.best_loss):
-            print(path, ':', loss)
-        # self.plot()
+            # print(path, ':', loss)
+            print(loss)
+        self.plot()
     def plot(self):
         fig, ax = plt.subplots(figsize=(7, 7))
         ax.plot(self.best_loss, label='Best run')
