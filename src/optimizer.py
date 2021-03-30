@@ -7,7 +7,7 @@ np.random.seed(20202020)
 class ACS:
     def __init__(self,
             ants=10,
-            evaporation_rate=0.8,
+            evaporation_rate=0.5,
             intensification=2,
             alpha=1,
             beta=1):
@@ -45,14 +45,14 @@ class ACS:
         # self.heuristic_matrix = np.ones((num_nodes, num_nodes))
         # self.heuristic_matrix[np.eye(num_nodes)==1] = 1 / self.data_obj.ds
         self.heuristic_matrix = 1 / self.data_obj.ds
-        print('HEURISTIC MATRIX')
-        print(self.heuristic_matrix.round(3))
+        # print('HEURISTIC MATRIX')
+        # print(self.heuristic_matrix.round(3))
         self.probability_matrix = (self.pheromone_matrix ** self.alpha) * \
             (self.heuristic_matrix ** self.beta)
-        print('PROBABILITY MATRIX')
-        print(self.probability_matrix.round(3))
-        print('='*10)
-        input()
+        # print('PROBABILITY MATRIX')
+        # print(self.probability_matrix.round(3))
+        # print('='*10)
+        # input()
 
         self.set_of_available_nodes = list(range(num_nodes))
 
@@ -66,10 +66,10 @@ class ACS:
     def _update_probability_mdd(self, c):
         self.heuristic_matrix = 1 / np.maximum(c + self.data_obj.ps + self.data_obj.setup_time, self.data_obj.ds)
         self._update_probability()
-        print('HEURISTIC')
-        print(self.heuristic_matrix)
-        print('PROBABILITY')
-        print(self.probability_matrix)
+        # print('HEURISTIC')
+        # print(self.heuristic_matrix)
+        # print('PROBABILITY')
+        # print(self.probability_matrix)
         # input()
         # pass
 
@@ -78,12 +78,18 @@ class ACS:
         select next node base on probabillity and set of available nodes
         """        
         numerator = self.probability_matrix[from_node, self.set_of_available_nodes] # only use prob of remain nodes
-        print('choose next node', from_node, numerator.round(3))
+        # print('choose next node', from_node, numerator.round(3))
         denominator = np.sum(numerator)
         probability = numerator / denominator
-        next_node = np.random.choice(range(len(probability)), p=probability)
+        # next_node = np.random.choice(range(len(probability)), p=probability)
+        pick = np.random.random()
+        curr = 0
+        for i, value in enumerate(probability):
+            curr += value 
+            if curr > pick:
+                return i
         # print('from node', from_node, '- next node', next_node)
-        return next_node
+        # return next_node
 
 
     def _update_pheromone(self, solutions, scores, current_best_loss):
@@ -156,18 +162,18 @@ class ACS:
         s = time()
         best_path_list = []
         for i in range(iterations):
-            print('='*20)
-            print('iter:', i)
+            # print('='*20)
+            # print('iter:', i)
             # print('PHEROMONE MATRIX')
             # print(self.pheromone_matrix.round(2))
-            print('PROBABILITY MATRIX')
-            print(self.probability_matrix.round(3))
+            # print('PROBABILITY MATRIX')
+            # print(self.probability_matrix.round(3))
             # print()
             s_i = time()
             paths, path = [], []
             for ant in range(self.ants): # contruct solution for each ant
-                print('-'*5)
-                print('ant:', ant)
+                # print('-'*5)
+                # print('ant:', ant)
                 # self._update_probability()
                 current_node = np.random.choice(self.set_of_available_nodes) # choose random node to start
                 start_node = current_node
@@ -175,7 +181,7 @@ class ACS:
                 # continuous evaluate
                 _t = self.data_obj.setup_time[start_node, start_node] + self.data_obj.ps[start_node] # current time
                 _c = self.data_obj.ws[start_node] * max(0, _t - self.data_obj.ds[start_node])
-                print('start node', start_node, _t)
+                # print('start node', start_node, _t)
                 while True:
                     path.append(current_node)
                     self._remove_node(current_node)
@@ -185,11 +191,11 @@ class ACS:
                         # current_node_index = self._choose_next_node_mdd(from_node=current_node, current_c=_c)
                         old_node = current_node
                         current_node = self.set_of_available_nodes[current_node_index]
-                        print('next node', current_node)
-                        print('current time', _t)
+                        # print('next node', current_node)
+                        # print('current time', _t)
                         _t += self.data_obj.setup_time[old_node, current_node] + self.data_obj.ps[current_node] # current time
                         _c += self.data_obj.ws[current_node] * max(0, _t - self.data_obj.ds[current_node])
-                        print('TIME', _t)
+                        # print('TIME', _t)
                     else:
                         break 
                 self._reinstate_nodes()
@@ -198,34 +204,35 @@ class ACS:
                 path = self.local_search(path)
 
                 paths.append(path)
-                print(path)
+                # print(path)
                 # input()
                 path = []
             coord, solution, C, scores = self._evaluate(paths)
             best_path_list.append(solution)
-            print('ALL SOLUTION:', paths)
-            for path, score in zip(paths, scores):
-                print(path, score)
-            print('BEST SOLUTION:', solution)
+            # print('ALL SOLUTION:', paths)
+            # for path, score in zip(paths, scores):
+            #     print(path, score)
+            # print('BEST SOLUTION:', solution)
             self.best_loss.append(C)
             # print('iter:', i, 'loss:', C)
-            print('BEFORE UPDATE PHEROMONE')
-            print(self.pheromone_matrix.round(3))
+            # print('BEFORE UPDATE PHEROMONE')
+            # print(self.pheromone_matrix.round(3))
             self._update_pheromone(paths, scores, C)
-            print('BEFORE INTENSIFY')
-            print(self.pheromone_matrix.round(3))
+            # print('BEFORE INTENSIFY')
+            # print(self.pheromone_matrix.round(3))
             self._intensify(coord)
-            print('AFTER INTENSIFY')
-            print(self.pheromone_matrix.round(3))
+            # print('AFTER INTENSIFY')
+            # print(self.pheromone_matrix.round(3))
             # self._update_probability()
             self._update_probability_mdd(c=0)
-            print('-'*20)
+            # print('-'*20)
             # input()
-        print('*'*20)
-        for path, loss in zip(best_path_list, self.best_loss):
+        # print('*'*20)
+        # for path, loss in zip(best_path_list, self.best_loss):
             # print(path, ':', loss)
-            print(loss)
-        self.plot()
+            # print(loss)
+        # self.plot()
+        return self.best_loss
     def plot(self):
         fig, ax = plt.subplots(figsize=(7, 7))
         ax.plot(self.best_loss, label='Best run')
