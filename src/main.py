@@ -8,15 +8,18 @@ data_dir = '../data/wtsds-instances'
 paths = os.listdir(data_dir)
 paths = [path for path in paths if path.endswith('instance')]
 
-out_dir = 'out'
+out_dir = 'out/au'
 os.makedirs(out_dir, exist_ok=True)
 
 optimizer = ACS(ants=10)
 
 for path in tqdm(paths):
+    print(path)
     data_obj = Dataset(os.path.join(data_dir, path))
-    loss = optimizer.fit(data_obj, iterations=100)
-    np.save(os.path.join(out_dir, path.split('.')[0] + '.npy'), loss)
+    # loss = optimizer.fit(data_obj, iterations=10)
+    # np.save(os.path.join(out_dir, path.split('.')[0] + '.npy'), loss)
+    path = optimizer.greedy(data_obj)
+    # break
 
 # data_obj = Dataset('../data/wtsds-instances/wt_sds_3.instance')
 # optimizer = ACS(ants=10)
@@ -41,5 +44,5 @@ for path in tqdm(paths):
 # coord, path, C = optimizer._evaluate([solution])
 # print('coord', coord)
 # print('path', path)
-optimizer.fit(data_obj, iterations=100)
+# optimizer.fit(data_obj, iterations=10)
 # print(C)

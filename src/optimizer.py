@@ -72,6 +72,15 @@ class ACS:
         # print(self.probability_matrix)
         # input()
         # pass
+    
+    def _update_probability_au(self, c, k=1):
+        _p = np.sum(self.data_obj.ps[self.set_of_available_nodes])
+        wi = self.data_obj.ws[self.set_of_available_nodes]
+        pi = self.data_obj.ps[self.set_of_available_nodes]
+        di = self.data_obj.ds[self.set_of_available_nodes]
+        au = (wi / pi) * np.exp(-max(di - c, 0) / (k * _p))
+        self.heuristic_matrix = 1 / au 
+        self._update_probability()
 
     def _choose_next_node_edd(self, from_node):
         """
@@ -91,6 +100,20 @@ class ACS:
         # print('from node', from_node, '- next node', next_node)
         # return next_node
 
+    def _choose_next_node_au(self, from_node):
+        """
+        select next node base on probabillity and set of available nodes
+        """        
+        numerator = self.probability_matrix
+        denominator = np.sum(numerator)
+        probability = numerator / denominator
+        # next_node = np.random.choice(range(len(probability)), p=probability)
+        pick = np.random.random()
+        curr = 0
+        for i, value in enumerate(probability):
+            curr += value 
+            if curr > pick:
+                return i
 
     def _update_pheromone(self, solutions, scores, current_best_loss):
         """
@@ -128,6 +151,30 @@ class ACS:
             else:
                 n_iter += 1
         return solution
+
+    def greedy(self, data_obj: Dataset):
+        self.data_obj = data_obj
+        self._initialize()
+        path = []
+        c = 0
+        while len(self.set_of_available_nodes) > 0:
+            pi = self.data_obj.ps[self.set_of_available_nodes]
+            di = self.data_obj.ds[self.set_of_available_nodes]
+            heuristic = 1 / np.maximum(c + pi, di)
+            # print(heuristic)
+            chosen_node_index = np.argmax(heuristic)
+            chosen_node = self.set_of_available_nodes[chosen_node_index]
+            # print('choose node', chosen_node)
+            if len(path)==0:
+                c = self.data_obj.setup_time[chosen_node, chosen_node] + self.data_obj.ps[chosen_node]
+            else:
+                c += self.data_obj.setup_time[path[-1], chosen_node] + self.data_obj.ps[chosen_node]
+            path.append(chosen_node)
+            # print(path)
+            self._remove_node(chosen_node)
+        print(self._evaluate([path])[-1])
+        return path
+
 
     def _evaluate(self, solutions):
         scores, coord_is, coord_js = [], [], []
